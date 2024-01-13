@@ -3,7 +3,8 @@ from Connection import Connection
 from functools import reduce
 from operator import add
 from typing import Callable
-import asyncio
+import networkx as nx
+import matplotlib.pyplot as plt
 
 
 class Graph:
@@ -37,9 +38,6 @@ class Graph:
             for neighbor in current_neighbors.keys():
                 func = self.get_outward_edges(current_vertex).get(neighbor)
                 distance = func(self.people[(current_vertex, neighbor)] + 1)
-                print(
-                    f"distance between: {current_vertex} and {neighbor} is {distance}"
-                )
                 if neighbor not in visited:
                     old_cost = D[neighbor]
                     new_cost = D[current_vertex] + distance
@@ -49,7 +47,6 @@ class Graph:
 
         path = []
         current_node = end_vertex
-        print("Constructing path")
         while current_node != start_vertex:
             path.append(current_node)
             neighbors = self.get_inward_edges(current_node)
@@ -85,7 +82,7 @@ class Graph:
             self.people[(path[i], path[i + 1])] -= 1
 
     def get_path_length(self, path: list[str]):
-        if path == []:
+        if not path:
             return float("inf")
         res = 0
         for i in range(len(path) - 1):
@@ -103,9 +100,6 @@ class Graph:
             can_change = False
             for i in range(population):
                 (path_len, path) = await self.dijkstra(start_vertex, end_vertex)
-                print(
-                    f"path: {path}, path_len: {path_len}, increase_amount: {self.get_increase_amount(path)} paths[i]: {paths[i]} old_path_len: {self.get_path_length(paths[i])}"
-                )
                 if path != paths[i] and path_len + self.get_increase_amount(
                     path
                 ) < self.get_path_length(paths[i]):
@@ -115,3 +109,21 @@ class Graph:
                     paths[i] = path
 
         return paths, [self.get_path_length(i) for i in paths]
+
+    def visualize(self):
+        print("Vertices: ", set(self.vertices))
+        print("Edges: ", self.edges)
+        print("People: ", self.people)
+
+        edge_list = [[i.a.name, i.b.name] for i in self.edges]
+        g = nx.Graph()
+        g.add_edges_from(edge_list)
+        edge_labels = {
+            (i.a.name, i.b.name): self.people[(i.a.name, i.b.name)] for i in self.edges
+        }
+        pos = nx.spring_layout(g)  # positions for all nodes
+
+        nx.draw_networkx(g, pos)
+        nx.draw_networkx_edge_labels(g, pos, edge_labels=edge_labels)
+        print("Edge label is the flow through the edge")
+        plt.show()
